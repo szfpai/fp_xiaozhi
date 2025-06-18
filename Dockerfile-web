@@ -23,7 +23,7 @@ RUN apk update && \
     rm -rf /var/cache/apk/*
 
 # 更新字体缓存
-RUN printf 'YES\n' | update-ms-fonts && fc-cache -f -v
+#RUN printf 'YES\n' | update-ms-fonts && fc-cache -f -v
 
 # 配置Nginx
 COPY docs/docker/nginx.conf /etc/nginx/nginx.conf

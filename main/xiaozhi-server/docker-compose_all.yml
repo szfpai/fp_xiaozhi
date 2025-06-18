@@ -4,7 +4,12 @@ version: '3'
 services:
   # Server模块
   xiaozhi-esp32-server:
-    image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:server_latest
+    platform: linux/amd64
+    build:
+      context: ../../  # 构建上下文路径
+      dockerfile: Dockerfile-server
+    pull_policy: never
+    image: xiaozhi-esp32-server:0.1
     container_name: xiaozhi-esp32-server
     depends_on:
       - xiaozhi-esp32-server-db
@@ -29,7 +34,12 @@ services:
 
   # manager-api和manager-web模块
   xiaozhi-esp32-server-web:
-    image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:web_latest
+    platform: linux/amd64
+    build:
+      context: ../../  # 修改构建上下文路径为项目根目录
+      dockerfile: Dockerfile-web
+    # image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:web_latest
+    image: xiaozhi-esp32-server-web:0.1
     container_name: xiaozhi-esp32-server-web
     restart: always
     networks:

@@ -100,3 +100,115 @@ databaseChangeLog:
         - sqlFile:
             encoding: utf8
             path: classpath:db/changelog/202505022134.sql
+  - changeSet:
+      id: 202505081146
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202505081146.sql
+  - changeSet:
+      id: 202505091555
+      author: whosmyqueen
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202505091555.sql
+  - changeSet:
+      id: 202505111914
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202505111914.sql
+  - changeSet:
+      id: 202505122348
+      author: ljwwd2
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202505122348.sql
+  - changeSet:
+      id: 202505142037
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202505142037.sql
+  - changeSet:
+      id: 202505182234
+      author: amen
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202505182234.sql
+  - changeSet:
+      id: 202505201744
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202505201744.sql
+  - changeSet:
+      id: 202505151451
+      author: hsoftxl
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202505151451.sql
+  - changeSet:
+      id: 202505271414
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202505271414.sql
+  - changeSet:
+      id: 202505292203
+      author: CAIXYPROMISE
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202505292203.sql
+  - changeSet:
+      id: 202506010920
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202506010920.sql
+  - changeSet:
+      id: 202506031639
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202506031639.sql
+  - changeSet:
+      id: 202506032232
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202506032232.sql
+  - changeSet:
+      id: 202506051538
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202506051538.sql
+  - changeSet:
+      id: 202506080955
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202506080955.sql
+  - changeSet:
+      id: 202506161101
+      author: hrz
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: classpath:db/changelog/202506161101.sql

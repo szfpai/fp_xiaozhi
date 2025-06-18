@@ -10,10 +10,10 @@ from pathlib import Path
 from core.utils import p3
 from core.handle.sendAudioHandle import send_stt_message
 from plugins_func.register import register_function, ToolType, ActionResponse, Action
-
+from core.utils.dialogue import Message
+from core.providers.tts.dto.dto import TTSMessageDTO, SentenceType, ContentType
 
 TAG = __name__
-logger = setup_logging()
 
 MUSIC_CACHE = {}
 
@@ -45,7 +45,7 @@ def play_music(conn, song_name: str):
 
         # 检查事件循环状态
         if not conn.loop.is_running():
-            logger.bind(tag=TAG).error("事件循环未运行，无法提交任务")
+            conn.logger.bind(tag=TAG).error("事件循环未运行，无法提交任务")
             return ActionResponse(
                 action=Action.RESPONSE, result="系统繁忙", response="请稍后再试"
             )
@@ -59,9 +59,9 @@ def play_music(conn, song_name: str):
         def handle_done(f):
             try:
                 f.result()  # 可在此处理成功逻辑
-                logger.bind(tag=TAG).info("播放完成")
+                conn.logger.bind(tag=TAG).info("播放完成")
             except Exception as e:
-                logger.bind(tag=TAG).error(f"播放失败: {e}")
+                conn.logger.bind(tag=TAG).error(f"播放失败: {e}")
 
         future.add_done_callback(handle_done)
 
@@ -69,7 +69,7 @@ def play_music(conn, song_name: str):
             action=Action.NONE, result="指令已接收", response="正在为您播放音乐"
         )
     except Exception as e:
-        logger.bind(tag=TAG).error(f"处理音乐意图错误: {e}")
+        conn.logger.bind(tag=TAG).error(f"处理音乐意图错误: {e}")
         return ActionResponse(
             action=Action.RESPONSE, result=str(e), response="播放音乐时出错了"
         )
@@ -150,7 +150,7 @@ async def handle_music_command(conn, text):
 
     """处理音乐播放指令"""
     clean_text = re.sub(r"[^\w\s]", "", text).strip()
-    logger.bind(tag=TAG).debug(f"检查是否是音乐命令: {clean_text}")
+    conn.logger.bind(tag=TAG).debug(f"检查是否是音乐命令: {clean_text}")
 
     # 尝试匹配具体歌名
     if os.path.exists(MUSIC_CACHE["music_dir"]):
@@ -165,7 +165,7 @@ async def handle_music_command(conn, text):
         if potential_song:
             best_match = _find_best_match(potential_song, MUSIC_CACHE["music_files"])
             if best_match:
-                logger.bind(tag=TAG).info(f"找到最匹配的歌曲: {best_match}")
+                conn.logger.bind(tag=TAG).info(f"找到最匹配的歌曲: {best_match}")
                 await play_local_music(conn, specific_file=best_match)
                 return True
     # 检查是否是通用播放音乐命令
@@ -195,7 +195,9 @@ async def play_local_music(conn, specific_file=None):
     """播放本地音乐文件"""
     try:
         if not os.path.exists(MUSIC_CACHE["music_dir"]):
-            logger.bind(tag=TAG).error(f"音乐目录不存在: " + MUSIC_CACHE["music_dir"])
+            conn.logger.bind(tag=TAG).error(
+                f"音乐目录不存在: " + MUSIC_CACHE["music_dir"]
+            )
             return
 
         # 确保路径正确性
@@ -204,34 +206,49 @@ async def play_local_music(conn, specific_file=None):
             music_path = os.path.join(MUSIC_CACHE["music_dir"], specific_file)
         else:
             if not MUSIC_CACHE["music_files"]:
-                logger.bind(tag=TAG).error("未找到MP3音乐文件")
+                conn.logger.bind(tag=TAG).error("未找到MP3音乐文件")
                 return
             selected_music = random.choice(MUSIC_CACHE["music_files"])
             music_path = os.path.join(MUSIC_CACHE["music_dir"], selected_music)
 
         if not os.path.exists(music_path):
-            logger.bind(tag=TAG).error(f"选定的音乐文件不存在: {music_path}")
+            conn.logger.bind(tag=TAG).error(f"选定的音乐文件不存在: {music_path}")
             return
         text = _get_random_play_prompt(selected_music)
         await send_stt_message(conn, text)
-        conn.tts_first_text_index = 0
-        conn.tts_last_text_index = 0
+        conn.dialogue.put(Message(role="assistant", content=text))
 
-        tts_file = await asyncio.to_thread(conn.tts.to_tts, text)
-        if tts_file is not None and os.path.exists(tts_file):
-            conn.tts_last_text_index = 1
-            opus_packets, _ = conn.tts.audio_to_opus_data(tts_file)
-            conn.audio_play_queue.put((opus_packets, None, 0))
-            os.remove(tts_file)
-
-        conn.llm_finish_task = True
-
-        if music_path.endswith(".p3"):
-            opus_packets, _ = p3.decode_opus_from_file(music_path)
-        else:
-            opus_packets, _ = conn.tts.audio_to_opus_data(music_path)
-        conn.audio_play_queue.put((opus_packets, None, conn.tts_last_text_index))
+        conn.tts.tts_text_queue.put(
+            TTSMessageDTO(
+                sentence_id=conn.sentence_id,
+                sentence_type=SentenceType.FIRST,
+                content_type=ContentType.ACTION,
+            )
+        )
+        conn.tts.tts_text_queue.put(
+            TTSMessageDTO(
+                sentence_id=conn.sentence_id,
+                sentence_type=SentenceType.MIDDLE,
+                content_type=ContentType.TEXT,
+                content_detail=text,
+            )
+        )
+        conn.tts.tts_text_queue.put(
+            TTSMessageDTO(
+                sentence_id=conn.sentence_id,
+                sentence_type=SentenceType.MIDDLE,
+                content_type=ContentType.FILE,
+                content_file=music_path,
+            )
+        )
+        conn.tts.tts_text_queue.put(
+            TTSMessageDTO(
+                sentence_id=conn.sentence_id,
+                sentence_type=SentenceType.LAST,
+                content_type=ContentType.ACTION,
+            )
+        )
 
     except Exception as e:
-        logger.bind(tag=TAG).error(f"播放音乐失败: {str(e)}")
-        logger.bind(tag=TAG).error(f"详细错误: {traceback.format_exc()}")
+        conn.logger.bind(tag=TAG).error(f"播放音乐失败: {str(e)}")
+        conn.logger.bind(tag=TAG).error(f"详细错误: {traceback.format_exc()}")

@@ -9,45 +9,44 @@ TTS上报功能已集成到ConnectionHandler类中。
 具体实现请参考core/connection.py中的相关代码。
 """
 
-import os
-import uuid
-import wave
+import time
+
 import opuslib_next
 
-from config.logger import setup_logging
-from config.manage_api_client import report
+from config.manage_api_client import report as manage_report
 
 TAG = __name__
-logger = setup_logging()
 
 
-def report_tts(conn, type, text, opus_data):
-    """执行TTS上报操作
+def report(conn, type, text, opus_data, report_time):
+    """执行聊天记录上报操作
 
     Args:
         conn: 连接对象
         type: 上报类型，1为用户，2为智能体
         text: 合成文本
         opus_data: opus音频数据
+        report_time: 上报时间
     """
     try:
         if opus_data:
-            audio_data = opus_to_wav(opus_data)
+            audio_data = opus_to_wav(conn, opus_data)
         else:
             audio_data = None
         # 执行上报
-        report(
+        manage_report(
             mac_address=conn.device_id,
             session_id=conn.session_id,
             chat_type=type,
             content=text,
             audio=audio_data,
+            report_time=report_time,
         )
     except Exception as e:
-        logger.bind(tag=TAG).error(f"TTS上报失败: {e}")
+        conn.logger.bind(tag=TAG).error(f"聊天记录上报失败: {e}")
 
 
-def opus_to_wav(opus_data):
+def opus_to_wav(conn, opus_data):
     """将Opus数据转换为WAV格式的字节流
 
     Args:
@@ -65,7 +64,7 @@ def opus_to_wav(opus_data):
             pcm_frame = decoder.decode(opus_packet, 960)  # 960 samples = 60ms
             pcm_data.append(pcm_frame)
         except opuslib_next.OpusError as e:
-            logger.bind(tag=TAG).error(f"Opus解码错误: {e}", exc_info=True)
+            conn.logger.bind(tag=TAG).error(f"Opus解码错误: {e}", exc_info=True)
 
     if not pcm_data:
         raise ValueError("没有有效的PCM数据")
@@ -94,8 +93,10 @@ def opus_to_wav(opus_data):
     return bytes(wav_header) + pcm_data_bytes
 
 
-def enqueue_tts_report(conn, type, text, opus_data):
-    if not conn.read_config_from_api or conn.need_bind:
+def enqueue_tts_report(conn, text, opus_data):
+    if not conn.read_config_from_api or conn.need_bind or not conn.report_tts_enable:
+        return
+    if conn.chat_history_conf == 0:
         return
     """将TTS数据加入上报队列
 
@@ -106,10 +107,43 @@ def enqueue_tts_report(conn, type, text, opus_data):
     """
     try:
         # 使用连接对象的队列，传入文本和二进制数据而非文件路径
-        conn.tts_report_queue.put((type, text, opus_data))
-
-        logger.bind(tag=TAG).debug(
-            f"TTS数据已加入上报队列: {conn.device_id}, 音频大小: {len(opus_data)} "
-        )
+        if conn.chat_history_conf == 2:
+            conn.report_queue.put((2, text, opus_data, int(time.time())))
+            conn.logger.bind(tag=TAG).debug(
+                f"TTS数据已加入上报队列: {conn.device_id}, 音频大小: {len(opus_data)} "
+            )
+        else:
+            conn.report_queue.put((2, text, None, int(time.time())))
+            conn.logger.bind(tag=TAG).debug(
+                f"TTS数据已加入上报队列: {conn.device_id}, 不上报音频"
+            )
     except Exception as e:
-        logger.bind(tag=TAG).error(f"加入TTS上报队列失败: {text}, {e}")
+        conn.logger.bind(tag=TAG).error(f"加入TTS上报队列失败: {text}, {e}")
+
+
+def enqueue_asr_report(conn, text, opus_data):
+    if not conn.read_config_from_api or conn.need_bind or not conn.report_asr_enable:
+        return
+    if conn.chat_history_conf == 0:
+        return
+    """将ASR数据加入上报队列
+
+    Args:
+        conn: 连接对象
+        text: 合成文本
+        opus_data: opus音频数据
+    """
+    try:
+        # 使用连接对象的队列，传入文本和二进制数据而非文件路径
+        if conn.chat_history_conf == 2:
+            conn.report_queue.put((1, text, opus_data, int(time.time())))
+            conn.logger.bind(tag=TAG).debug(
+                f"ASR数据已加入上报队列: {conn.device_id}, 音频大小: {len(opus_data)} "
+            )
+        else:
+            conn.report_queue.put((1, text, None, int(time.time())))
+            conn.logger.bind(tag=TAG).debug(
+                f"ASR数据已加入上报队列: {conn.device_id}, 不上报音频"
+            )
+    except Exception as e:
+        conn.logger.bind(tag=TAG).debug(f"加入ASR上报队列失败: {text}, {e}")

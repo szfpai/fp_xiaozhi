@@ -50,6 +50,11 @@ public class AgentTemplateEntity implements Serializable {
     private String llmModelId;
 
     /**
+     * VLLM模型标识
+     */
+    private String vllmModelId;
+
+    /**
      * 语音合成模型标识
      */
     private String ttsModelId;
@@ -70,10 +75,19 @@ public class AgentTemplateEntity implements Serializable {
     private String intentModelId;
 
     /**
+     * 聊天记录配置（0不记录 1仅记录文本 2记录文本和语音）
+     */
+    private Integer chatHistoryConf;
+
+    /**
      * 角色设定参数
      */
     private String systemPrompt;
 
+    /**
+     * 总结记忆
+     */
+    private String summaryMemory;
     /**
      * 语言编码
      */

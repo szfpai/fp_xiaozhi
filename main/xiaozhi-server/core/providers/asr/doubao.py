@@ -1,17 +1,14 @@
 import time
-import io
-import wave
 import os
-from typing import Optional, Tuple, List
 import uuid
-import websockets
 import json
 import gzip
-
-import opuslib_next
-from core.providers.asr.base import ASRProviderBase
-
+import websockets
 from config.logger import setup_logging
+from typing import Optional, Tuple, List
+from core.providers.asr.base import ASRProviderBase
+from core.providers.asr.dto.dto import InterfaceType
+
 
 TAG = __name__
 logger = setup_logging()
@@ -85,11 +82,13 @@ def parse_response(res):
 
 class ASRProvider(ASRProviderBase):
     def __init__(self, config: dict, delete_audio_file: bool):
+        super().__init__()
+        self.interface_type = InterfaceType.NON_STREAM
         self.appid = config.get("appid")
         self.cluster = config.get("cluster")
         self.access_token = config.get("access_token")
-        self.boosting_table_name = config.get("boosting_table_name")
-        self.correct_table_name = config.get("correct_table_name")
+        self.boosting_table_name = config.get("boosting_table_name", "")
+        self.correct_table_name = config.get("correct_table_name", "")
         self.output_dir = config.get("output_dir")
         self.delete_audio_file = delete_audio_file
 
@@ -100,20 +99,6 @@ class ASRProvider(ASRProviderBase):
 
         # 确保输出目录存在
         os.makedirs(self.output_dir, exist_ok=True)
-
-    def save_audio_to_file(self, pcm_data: List[bytes], session_id: str) -> str:
-        """PCM数据保存为WAV文件"""
-        module_name = __name__.split(".")[-1]
-        file_name = f"asr_{module_name}_{session_id}_{uuid.uuid4()}.wav"
-        file_path = os.path.join(self.output_dir, file_name)
-
-        with wave.open(file_path, "wb") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)  # 2 bytes = 16-bit
-            wf.setframerate(16000)
-            wf.writeframes(b"".join(pcm_data))
-
-        return file_path
 
     @staticmethod
     def _generate_header(
@@ -183,6 +168,7 @@ class ASRProvider(ASRProviderBase):
                 if (
                     "payload_msg" in result
                     and result["payload_msg"]["code"] != self.success_code
+                    and result["payload_msg"]["code"] != 1013  # 忽略无有效语音的错误
                 ):
                     logger.bind(tag=TAG).error(f"ASR error: {result}")
                     return None
@@ -218,6 +204,9 @@ class ASRProvider(ASRProviderBase):
                     if len(result["payload_msg"]["result"]) > 0:
                         return result["payload_msg"]["result"][0]["text"]
                     return None
+                elif "payload_msg" in result and result["payload_msg"]["code"] == 1013:
+                    # 无有效语音，返回空字符串
+                    return ""
                 else:
                     logger.bind(tag=TAG).error(f"ASR error: {result}")
                     return None
@@ -225,21 +214,6 @@ class ASRProvider(ASRProviderBase):
         except Exception as e:
             logger.bind(tag=TAG).error(f"ASR request failed: {e}", exc_info=True)
             return None
-
-    @staticmethod
-    def decode_opus(opus_data: List[bytes], session_id: str) -> List[bytes]:
-
-        decoder = opuslib_next.Decoder(16000, 1)  # 16kHz, 单声道
-        pcm_data = []
-
-        for opus_packet in opus_data:
-            try:
-                pcm_frame = decoder.decode(opus_packet, 960)  # 960 samples = 60ms
-                pcm_data.append(pcm_frame)
-            except opuslib_next.OpusError as e:
-                logger.bind(tag=TAG).error(f"Opus解码错误: {e}", exc_info=True)
-
-        return pcm_data
 
     @staticmethod
     def slice_data(data: bytes, chunk_size: int) -> (list, bool):
@@ -258,14 +232,17 @@ class ASRProvider(ASRProviderBase):
             yield data[offset:data_len], True
 
     async def speech_to_text(
-        self, opus_data: List[bytes], session_id: str
+        self, opus_data: List[bytes], session_id: str, audio_format="opus"
     ) -> Tuple[Optional[str], Optional[str]]:
         """将语音数据转换为文本"""
 
         file_path = None
         try:
             # 合并所有opus数据包
-            pcm_data = self.decode_opus(opus_data, session_id)
+            if audio_format == "pcm":
+                pcm_data = opus_data
+            else:
+                pcm_data = self.decode_opus(opus_data)
             combined_pcm_data = b"".join(pcm_data)
 
             # 判断是否保存为WAV文件

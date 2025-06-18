@@ -1,12 +1,9 @@
 import base64
-import os
-import uuid
 import requests
 import ormsgpack
 from pathlib import Path
 from pydantic import BaseModel, Field, conint, model_validator
 from typing_extensions import Annotated
-from datetime import datetime
 from typing import Literal
 from core.utils.util import check_model_key, parse_string_to_list
 from core.providers.tts.base import TTSProviderBase
@@ -85,16 +82,23 @@ class TTSProvider(TTSProviderBase):
     def __init__(self, config, delete_audio_file):
         super().__init__(config, delete_audio_file)
 
-        self.reference_id = config.get("reference_id")
+        self.reference_id = (
+            None if not config.get("reference_id") else config.get("reference_id")
+        )
         self.reference_audio = parse_string_to_list(config.get("reference_audio"))
         self.reference_text = parse_string_to_list(config.get("reference_text"))
-        self.format = config.get("format", "wav")
-
+        self.format = config.get("response_format", "wav")
+        self.audio_file_type = config.get("response_format", "wav")
         self.api_key = config.get("api_key", "YOUR_API_KEY")
-        have_key = check_model_key("FishSpeech TTS", self.api_key)
-        if not have_key:
+        model_key_msg = check_model_key("FishSpeech TTS", self.api_key)
+        if model_key_msg:
+            logger.bind(tag=TAG).error(model_key_msg)
             return
-        self.normalize = config.get("normalize", True)
+        self.normalize = str(config.get("normalize", True)).lower() in (
+            "true",
+            "1",
+            "yes",
+        )
 
         # 处理空字符串的情况
         channels = config.get("channels", "1")
@@ -124,14 +128,8 @@ class TTSProvider(TTSProviderBase):
             "yes",
         )
         self.use_memory_cache = config.get("use_memory_cache", "on")
-        self.seed = config.get("seed") or None
+        self.seed = int(config.get("seed")) if config.get("seed") else None
         self.api_url = config.get("api_url", "http://127.0.0.1:8080/v1/tts")
-
-    def generate_filename(self, extension=".wav"):
-        return os.path.join(
-            self.output_file,
-            f"tts-{datetime.now().date()}@{uuid.uuid4().hex}{extension}",
-        )
 
     async def text_to_speak(self, text, output_file):
         # Prepare reference data
@@ -173,9 +171,14 @@ class TTSProvider(TTSProviderBase):
         if response.status_code == 200:
             audio_content = response.content
 
-            with open(output_file, "wb") as audio_file:
-                audio_file.write(audio_content)
+            if output_file:
+                with open(output_file, "wb") as audio_file:
+                    audio_file.write(audio_content)
+            else:
+                return audio_content
 
         else:
-            print(f"Request failed with status code {response.status_code}")
+            error_msg = f"Request failed with status code {response.status_code}"
+            print(error_msg)
             print(response.json())
+            raise Exception(error_msg)

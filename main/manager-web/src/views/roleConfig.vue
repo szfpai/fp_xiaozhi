@@ -15,9 +15,17 @@
                 <img loading="lazy" src="@/assets/home/setting-user.png" alt="">
               </div>
               <span class="header-title">{{ form.agentName }}</span>
-              <button class="custom-close-btn" @click="goToHome">
-                ×
-              </button>
+              <div class="header-actions">
+                <div class="hint-text">
+                  <img loading="lazy" src="@/assets/home/info.png" alt="">
+                  <span>保存配置后，需要重启设备，新的配置才会生效。</span>
+                </div>
+                <el-button type="primary" class="save-btn" @click="saveConfig">保存配置</el-button>
+                <el-button class="reset-btn" @click="resetConfig">重置</el-button>
+                <button class="custom-close-btn" @click="goToHome">
+                  ×
+                </button>
+              </div>
             </div>
             <div class="divider"></div>
 
@@ -26,7 +34,7 @@
                 <div class="form-grid">
                   <div class="form-column">
                     <el-form-item label="助手昵称：">
-                      <el-input v-model="form.agentName" class="form-input" />
+                      <el-input v-model="form.agentName" class="form-input" maxlength="10" />
                     </el-form-item>
                     <el-form-item label="角色模版：">
                       <div class="template-container">
@@ -37,8 +45,14 @@
                       </div>
                     </el-form-item>
                     <el-form-item label="角色介绍：">
-                      <el-input type="textarea" rows="12" resize="none" placeholder="请输入内容" v-model="form.systemPrompt"
+                      <el-input type="textarea" rows="9" resize="none" placeholder="请输入内容" v-model="form.systemPrompt"
                         maxlength="2000" show-word-limit class="form-textarea" />
+                    </el-form-item>
+
+                    <el-form-item label="记忆：">
+                      <el-input type="textarea" rows="6" resize="none" v-model="form.summaryMemory" maxlength="2000"
+                        show-word-limit class="form-textarea"
+                        :disabled="form.model.memModelId !== 'Memory_mem_local_short'" />
                     </el-form-item>
                     <el-form-item label="语言编码：" style="display: none;">
                       <el-input v-model="form.langCode" placeholder="请输入语言编码，如：zh_CN" maxlength="10" show-word-limit
@@ -48,24 +62,61 @@
                       <el-input v-model="form.language" placeholder="请输入交互语种，如：中文" maxlength="10" show-word-limit
                         class="form-input" />
                     </el-form-item>
-                    <div class="action-bar">
-                      <el-button type="primary" class="save-btn" @click="saveConfig">保存配置</el-button>
-                      <el-button class="reset-btn" @click="resetConfig">重置</el-button>
-                      <div class="hint-text">
-                        <img loading="lazy" src="@/assets/home/red-info.png" alt="">
-                        <span>保存配置后，需要重启设备，新的配置才会生效。</span>
-                      </div>
-                    </div>
                   </div>
                   <div class="form-column">
-                    <el-form-item v-for="(model, index) in models" :key="`model-${index}`" :label="model.label"
+                    <div class="model-row">
+                      <el-form-item label="语音活动检测(VAD)" class="model-item">
+                        <div class="model-select-wrapper">
+                          <el-select v-model="form.model.vadModelId" filterable placeholder="请选择" class="form-select"
+                            @change="handleModelChange('VAD', $event)">
+                            <el-option v-for="(item, optionIndex) in modelOptions['VAD']"
+                              :key="`option-vad-${optionIndex}`" :label="item.label" :value="item.value" />
+                          </el-select>
+                        </div>
+                      </el-form-item>
+                      <el-form-item label="语音识别(ASR)" class="model-item">
+                        <div class="model-select-wrapper">
+                          <el-select v-model="form.model.asrModelId" filterable placeholder="请选择" class="form-select"
+                            @change="handleModelChange('ASR', $event)">
+                            <el-option v-for="(item, optionIndex) in modelOptions['ASR']"
+                              :key="`option-asr-${optionIndex}`" :label="item.label" :value="item.value" />
+                          </el-select>
+                        </div>
+                      </el-form-item>
+                    </div>
+                    <el-form-item v-for="(model, index) in models.slice(2)" :key="`model-${index}`" :label="model.label"
                       class="model-item">
-                      <el-select v-model="form.model[model.key]" filterable placeholder="请选择" class="form-select">
-                        <el-option v-for="(item, optionIndex) in modelOptions[model.type]"
-                          :key="`option-${index}-${optionIndex}`" :label="item.label" :value="item.value" />
-                      </el-select>
+                      <div class="model-select-wrapper">
+                        <el-select v-model="form.model[model.key]" filterable placeholder="请选择" class="form-select"
+                          @change="handleModelChange(model.type, $event)">
+                          <el-option v-for="(item, optionIndex) in modelOptions[model.type]"
+                            :key="`option-${index}-${optionIndex}`" :label="item.label" :value="item.value" />
+                        </el-select>
+                        <div v-if="showFunctionIcons(model.type)" class="function-icons">
+                          <el-tooltip v-for="func in currentFunctions" :key="func.name" effect="dark" placement="top"
+                            popper-class="custom-tooltip">
+                            <div slot="content">
+                              <div><strong>功能名称:</strong> {{ func.name }}</div>
+                            </div>
+                            <div class="icon-dot" :style="{ backgroundColor: getFunctionColor(func.name) }">
+                              {{ func.name.charAt(0) }}
+                            </div>
+                          </el-tooltip>
+                          <el-button class="edit-function-btn" @click="openFunctionDialog"
+                            :class="{ 'active-btn': showFunctionDialog }">
+                            编辑功能
+                          </el-button>
+                        </div>
+                        <div v-if="model.type === 'Memory' && form.model.memModelId !== 'Memory_nomem'"
+                          class="chat-history-options">
+                          <el-radio-group v-model="form.chatHistoryConf" @change="updateChatHistoryConf">
+                            <el-radio-button :label="1">上报文字</el-radio-button>
+                            <el-radio-button :label="2">上报文字+语音</el-radio-button>
+                          </el-radio-group>
+                        </div>
+                      </div>
                     </el-form-item>
-                    <el-form-item label="角色音色：">
+                    <el-form-item label="角色音色">
                       <el-select v-model="form.ttsVoiceId" placeholder="请选择" class="form-select">
                         <el-option v-for="(item, index) in voiceOptions" :key="`voice-${index}`" :label="item.label"
                           :value="item.value" />
@@ -75,28 +126,33 @@
                 </div>
               </div>
             </el-form>
-
           </el-card>
         </div>
       </div>
     </div>
+
+    <function-dialog v-model="showFunctionDialog" :functions="currentFunctions" :all-functions="allFunctions"
+      @update-functions="handleUpdateFunctions" @dialog-closed="handleDialogClosed" />
   </div>
 </template>
 
 <script>
 import Api from '@/apis/api';
+import FunctionDialog from "@/components/FunctionDialog.vue";
 import HeaderBar from "@/components/HeaderBar.vue";
 
 export default {
   name: 'RoleConfigPage',
-  components: { HeaderBar },
+  components: { HeaderBar, FunctionDialog },
   data() {
     return {
       form: {
         agentCode: "",
         agentName: "",
         ttsVoiceId: "",
+        chatHistoryConf: 0,
         systemPrompt: "",
+        summaryMemory: "",
         langCode: "",
         language: "",
         sort: "",
@@ -105,6 +161,7 @@ export default {
           vadModelId: "",
           asrModelId: "",
           llmModelId: "",
+          vllmModelId: "",
           memModelId: "",
           intentModelId: "",
         }
@@ -113,6 +170,7 @@ export default {
         { label: '语音活动检测(VAD)', key: 'vadModelId', type: 'VAD' },
         { label: '语音识别(ASR)', key: 'asrModelId', type: 'ASR' },
         { label: '大语言模型(LLM)', key: 'llmModelId', type: 'LLM' },
+        { label: '视觉大模型(VLLM)', key: 'vllmModelId', type: 'VLLM' },
         { label: '意图识别(Intent)', key: 'intentModelId', type: 'Intent' },
         { label: '记忆(Memory)', key: 'memModelId', type: 'Memory' },
         { label: '语音合成(TTS)', key: 'ttsModelId', type: 'TTS' },
@@ -121,6 +179,14 @@ export default {
       templates: [],
       loadingTemplate: false,
       voiceOptions: [],
+      showFunctionDialog: false,
+      currentFunctions: [],
+      functionColorMap: [
+        '#FF6B6B', '#4ECDC4', '#45B7D1',
+        '#96CEB4', '#FFEEAD', '#D4A5A5', '#A2836E'
+      ],
+      allFunctions: [],
+      originalFunctions: [],
     }
   },
   methods: {
@@ -134,14 +200,23 @@ export default {
         asrModelId: this.form.model.asrModelId,
         vadModelId: this.form.model.vadModelId,
         llmModelId: this.form.model.llmModelId,
+        vllmModelId: this.form.model.vllmModelId,
         ttsModelId: this.form.model.ttsModelId,
         ttsVoiceId: this.form.ttsVoiceId,
+        chatHistoryConf: this.form.chatHistoryConf,
         memModelId: this.form.model.memModelId,
         intentModelId: this.form.model.intentModelId,
         systemPrompt: this.form.systemPrompt,
+        summaryMemory: this.form.summaryMemory,
         langCode: this.form.langCode,
         language: this.form.language,
-        sort: this.form.sort
+        sort: this.form.sort,
+        functions: this.currentFunctions.map(item => {
+          return ({
+            pluginId: item.id,
+            paramInfo: item.params
+          })
+        })
       };
       Api.agent.updateAgentConfig(this.$route.query.agentId, configData, ({ data }) => {
         if (data.code === 0) {
@@ -167,7 +242,9 @@ export default {
           agentCode: "",
           agentName: "",
           ttsVoiceId: "",
+          chatHistoryConf: 0,
           systemPrompt: "",
+          summaryMemory: "",
           langCode: "",
           language: "",
           sort: "",
@@ -176,10 +253,12 @@ export default {
             vadModelId: "",
             asrModelId: "",
             llmModelId: "",
+            vllmModelId: "",
             memModelId: "",
             intentModelId: "",
           }
         }
+        this.currentFunctions = [];
         this.$message.success({
           message: '配置已重置',
           showClose: true
@@ -220,13 +299,16 @@ export default {
         ...this.form,
         agentName: templateData.agentName || this.form.agentName,
         ttsVoiceId: templateData.ttsVoiceId || this.form.ttsVoiceId,
+        chatHistoryConf: templateData.chatHistoryConf || this.form.chatHistoryConf,
         systemPrompt: templateData.systemPrompt || this.form.systemPrompt,
+        summaryMemory: templateData.summaryMemory || this.form.summaryMemory,
         langCode: templateData.langCode || this.form.langCode,
         model: {
           ttsModelId: templateData.ttsModelId || this.form.model.ttsModelId,
           vadModelId: templateData.vadModelId || this.form.model.vadModelId,
           asrModelId: templateData.asrModelId || this.form.model.asrModelId,
           llmModelId: templateData.llmModelId || this.form.model.llmModelId,
+          vllmModelId: templateData.vllmModelId || this.form.model.vllmModelId,
           memModelId: templateData.memModelId || this.form.model.memModelId,
           intentModelId: templateData.intentModelId || this.form.model.intentModelId
         }
@@ -243,10 +325,38 @@ export default {
               vadModelId: data.data.vadModelId,
               asrModelId: data.data.asrModelId,
               llmModelId: data.data.llmModelId,
+              vllmModelId: data.data.vllmModelId,
               memModelId: data.data.memModelId,
               intentModelId: data.data.intentModelId
             }
           };
+          // 后端只给了最小映射：[{ id, agentId, pluginId }, ...]
+          const savedMappings = data.data.functions || [];
+
+          // 先保证 allFunctions 已经加载（如果没有，则先 fetchAllFunctions）
+          const ensureFuncs = this.allFunctions.length
+            ? Promise.resolve()
+            : this.fetchAllFunctions();
+
+          ensureFuncs.then(() => {
+            // 合并：按照 pluginId（id 字段）把全量元数据信息补齐
+            this.currentFunctions = savedMappings.map(mapping => {
+              const meta = this.allFunctions.find(f => f.id === mapping.pluginId);
+              if (!meta) {
+                // 插件定义没找到，退化处理
+                return { id: mapping.pluginId, name: mapping.pluginId, params: {} };
+              }
+              return {
+                id: mapping.pluginId,
+                name: meta.name,
+                // 后端如果还有 paramInfo 字段就用 mapping.paramInfo，否则用 meta.params 默认值
+                params: mapping.paramInfo || { ...meta.params },
+                fieldsMeta: meta.fieldsMeta  // 保留以便对话框渲染 tooltip
+              };
+            });
+            // 备份原始，以备取消时恢复
+            this.originalFunctions = JSON.parse(JSON.stringify(this.currentFunctions));
+          });
         } else {
           this.$message.error(data.msg || '获取配置失败');
         }
@@ -281,7 +391,70 @@ export default {
           this.voiceOptions = [];
         }
       });
-    }
+    },
+    getFunctionColor(name) {
+      const hash = [...name].reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return this.functionColorMap[hash % this.functionColorMap.length];
+    },
+    showFunctionIcons(type) {
+      return type === 'Intent' &&
+        this.form.model.intentModelId !== 'Intent_nointent';
+    },
+    handleModelChange(type, value) {
+      if (type === 'Intent' && value !== 'Intent_nointent') {
+        this.fetchAllFunctions();
+      }
+      if (type === 'Memory' && value === 'Memory_nomem') {
+        this.form.chatHistoryConf = 0;
+      }
+      if (type === 'Memory' && value !== 'Memory_nomem' && (this.form.chatHistoryConf === 0 || this.form.chatHistoryConf === null)) {
+        this.form.chatHistoryConf = 2;
+      }
+    },
+    fetchAllFunctions() {
+      return new Promise((resolve, reject) => {
+        Api.model.getPluginFunctionList(null, ({ data }) => {
+          if (data.code === 0) {
+            this.allFunctions = data.data.map(item => {
+              const meta = JSON.parse(item.fields || '[]');
+              const params = meta.reduce((m, f) => {
+                m[f.key] = f.default;
+                return m;
+              }, {});
+              return { ...item, fieldsMeta: meta, params };
+            });
+            resolve();
+          } else {
+            this.$message.error(data.msg || '获取插件列表失败');
+            reject();
+          }
+        });
+      });
+    },
+    openFunctionDialog() {
+      // 显示编辑对话框时，确保 allFunctions 已经加载
+      if (this.allFunctions.length === 0) {
+        this.fetchAllFunctions().then(() => this.showFunctionDialog = true);
+      } else {
+        this.showFunctionDialog = true;
+      }
+    },
+    handleUpdateFunctions(selected) {
+      this.currentFunctions = selected;
+    },
+    handleDialogClosed(saved) {
+      if (!saved) {
+        this.currentFunctions = JSON.parse(JSON.stringify(this.originalFunctions));
+      } else {
+        this.originalFunctions = JSON.parse(JSON.stringify(this.currentFunctions));
+      }
+      this.showFunctionDialog = false;
+    },
+    updateChatHistoryConf() {
+      if (this.form.model.memModelId === 'Memory_nomem') {
+        this.form.chatHistoryConf = 0;
+      }
+    },
   },
   watch: {
     'form.model.ttsModelId': {
@@ -308,6 +481,7 @@ export default {
     const agentId = this.$route.query.agentId;
     if (agentId) {
       this.fetchAgentConfig(agentId);
+      this.fetchAllFunctions();
     }
     this.fetchModelOptions();
     this.fetchTemplates();
@@ -318,7 +492,6 @@ export default {
 <style scoped>
 .welcome {
   min-width: 900px;
-  min-height: 506px;
   height: 100vh;
   display: flex;
   position: relative;
@@ -334,7 +507,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 1.5vh 24px;
 }
 
 .page-title {
@@ -344,7 +517,7 @@ export default {
 }
 
 .main-wrapper {
-  margin: 5px 22px;
+  margin: 1vh 22px;
   border-radius: 15px;
   height: calc(100vh - 24vh);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
@@ -416,7 +589,7 @@ export default {
 }
 
 .form-content {
-  padding: 20px 0;
+  padding: 2vh 0;
 }
 
 .form-grid {
@@ -450,11 +623,11 @@ export default {
 }
 
 .template-item {
-  height: 37px;
+  height: 4vh;
   width: 76px;
   border-radius: 8px;
   background: #e6ebff;
-  line-height: 37px;
+  line-height: 4vh;
   font-weight: 400;
   font-size: 11px;
   text-align: center;
@@ -467,51 +640,54 @@ export default {
   background-color: #d0d8ff;
 }
 
-.action-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 20px;
-  align-items: center;
-}
-
-.action-bar {
-  .el-button.save-btn {
-    background: #5778ff;
-    color: white;
-    border: none;
-    border-radius: 18px;
-    padding: 10px 20px;
-    width: 100px;
-    height: 35px;
-    font-size: 14px;
-  }
-
-  .el-button.reset-btn {
-    background: #e6ebff;
-    color: #5778ff;
-    border: 1px solid #adbdff;
-    border-radius: 18px;
-    padding: 10px 20px;
-  }
-}
-
-.hint-text {
+.model-select-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #979db1;
-  font-size: 11px;
-  margin-left: 16px;
+  width: 100%;
 }
 
-.hint-text img {
-  width: 19px;
-  height: 19px;
+.model-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 6px;
+}
+
+.model-row .model-item {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.model-row .el-form-item__label {
+  font-size: 12px !important;
+  color: #3d4566 !important;
+  font-weight: 400;
+  line-height: 22px;
+  padding-bottom: 2px;
+}
+
+.function-icons {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding-left: 10px;
+}
+
+.icon-dot {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  margin-right: 8px;
+  position: relative;
 }
 
 ::v-deep .el-form-item__label {
-  font-size: 10px !important;
+  font-size: 12px !important;
   color: #3d4566 !important;
   font-weight: 400;
   line-height: 22px;
@@ -551,5 +727,74 @@ export default {
 .custom-close-btn:hover {
   color: #409EFF;
   border-color: #409EFF;
+}
+
+.edit-function-btn {
+  background: #e6ebff;
+  color: #5778ff;
+  border: 1px solid #adbdff;
+  border-radius: 18px;
+  padding: 10px 20px;
+  transition: all 0.3s;
+}
+
+.edit-function-btn.active-btn {
+  background: #5778ff;
+  color: white;
+}
+
+.chat-history-options {
+  display: flex;
+  gap: 10px;
+  min-width: 250px;
+  justify-content: flex-end;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.header-actions .hint-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #979db1;
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.header-actions .hint-text img {
+  width: 16px;
+  height: 16px;
+}
+
+.header-actions .save-btn {
+  background: #5778ff;
+  color: white;
+  border: none;
+  border-radius: 18px;
+  padding: 8px 16px;
+  height: 32px;
+  font-size: 14px;
+}
+
+.header-actions .reset-btn {
+  background: #e6ebff;
+  color: #5778ff;
+  border: 1px solid #adbdff;
+  border-radius: 18px;
+  padding: 8px 16px;
+  height: 32px;
+}
+
+.header-actions .custom-close-btn {
+  position: static;
+  transform: none;
+  width: 32px;
+  height: 32px;
+  margin-left: 8px;
 }
 </style>

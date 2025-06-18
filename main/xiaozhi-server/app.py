@@ -1,12 +1,14 @@
-import asyncio
 import sys
+import uuid
 import signal
+import asyncio
+from aioconsole import ainput
 from config.settings import load_config
-from core.websocket_server import WebSocketServer
-from core.ota_server import SimpleOtaServer
-from core.utils.util import check_ffmpeg_installed
 from config.logger import setup_logging
 from core.utils.util import get_local_ip
+from core.http_server import SimpleHttpServer
+from core.websocket_server import WebSocketServer
+from core.utils.util import check_ffmpeg_installed
 
 TAG = __name__
 logger = setup_logging()
@@ -34,26 +36,47 @@ async def wait_for_exit() -> None:
             pass
 
 
+async def monitor_stdin():
+    """监控标准输入，消费回车键"""
+    while True:
+        await ainput()  # 异步等待输入，消费回车
+
+
 async def main():
     check_ffmpeg_installed()
     config = load_config()
 
+    # 默认使用manager-api的secret作为auth_key
+    # 如果secret为空，则生成随机密钥
+    # auth_key用于jwt认证，比如视觉分析接口的jwt认证
+    auth_key = config.get("manager-api", {}).get("secret", "")
+    if not auth_key or len(auth_key) == 0 or "你" in auth_key:
+        auth_key = str(uuid.uuid4().hex)
+    config["server"]["auth_key"] = auth_key
+
+    # 添加 stdin 监控任务
+    stdin_task = asyncio.create_task(monitor_stdin())
+
     # 启动 WebSocket 服务器
     ws_server = WebSocketServer(config)
     ws_task = asyncio.create_task(ws_server.start())
-    ota_task = None
+    # 启动 Simple http 服务器
+    ota_server = SimpleHttpServer(config)
+    ota_task = asyncio.create_task(ota_server.start())
 
     read_config_from_api = config.get("read_config_from_api", False)
+    port = int(config["server"].get("http_port", 8003))
     if not read_config_from_api:
-        # 启动 Simple OTA 服务器
-        ota_server = SimpleOtaServer(config)
-        ota_task = asyncio.create_task(ota_server.start())
-
         logger.bind(tag=TAG).info(
             "OTA接口是\t\thttp://{}:{}/xiaozhi/ota/",
             get_local_ip(),
-            config["server"]["ota_port"],
+            port,
         )
+    logger.bind(tag=TAG).info(
+        "视觉分析接口是\thttp://{}:{}/mcp/vision/explain",
+        get_local_ip(),
+        port,
+    )
 
     # 获取WebSocket配置，使用安全的默认值
     websocket_port = 8000
@@ -78,19 +101,22 @@ async def main():
     )
 
     try:
-        await wait_for_exit()  # 监听退出信号
+        await wait_for_exit()  # 阻塞直到收到退出信号
     except asyncio.CancelledError:
         print("任务被取消，清理资源中...")
     finally:
+        # 取消所有任务（关键修复点）
+        stdin_task.cancel()
         ws_task.cancel()
         if ota_task:
             ota_task.cancel()
-        try:
-            await ws_task
-            if ota_task:
-                await ota_task
-        except asyncio.CancelledError:
-            pass
+
+        # 等待任务终止（必须加超时）
+        await asyncio.wait(
+            [stdin_task, ws_task, ota_task] if ota_task else [stdin_task, ws_task],
+            timeout=3.0,
+            return_when=asyncio.ALL_COMPLETED,
+        )
         print("服务器已关闭，程序退出。")
 
 

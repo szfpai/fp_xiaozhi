@@ -12,7 +12,7 @@ export default {
                 RequestService.clearRequestTime();
                 callback(res);
             })
-            .fail(() => {
+            .networkFail(() => {
                 RequestService.reAjaxFun(() => {
                     this.getAgentList(callback);
                 });
@@ -28,7 +28,7 @@ export default {
                 RequestService.clearRequestTime();
                 callback(res);
             })
-            .fail(() => {
+            .networkFail(() => {
                 RequestService.reAjaxFun(() => {
                     this.addAgent(agentName, callback);
                 });
@@ -43,25 +43,25 @@ export default {
                 RequestService.clearRequestTime();
                 callback(res);
             })
-            .fail(() => {
+            .networkFail(() => {
                 RequestService.reAjaxFun(() => {
                     this.deleteAgent(agentId, callback);
                 });
             }).send();
     },
     // 获取智能体配置
-    getDeviceConfig(deviceId, callback) {
+    getDeviceConfig(agentId, callback) {
         RequestService.sendRequest()
-            .url(`${getServiceUrl()}/agent/${deviceId}`)
+            .url(`${getServiceUrl()}/agent/${agentId}`)
             .method('GET')
             .success((res) => {
                 RequestService.clearRequestTime();
                 callback(res);
             })
-            .fail((err) => {
+            .networkFail((err) => {
                 console.error('获取配置失败:', err);
                 RequestService.reAjaxFun(() => {
-                    this.getDeviceConfig(deviceId, callback);
+                    this.getDeviceConfig(agentId, callback);
                 });
             }).send();
     },
@@ -75,7 +75,7 @@ export default {
                 RequestService.clearRequestTime();
                 callback(res);
             })
-            .fail(() => {
+            .networkFail(() => {
                 RequestService.reAjaxFun(() => {
                     this.updateAgentConfig(agentId, configData, callback);
                 });
@@ -90,7 +90,7 @@ export default {
                 RequestService.clearRequestTime();
                 callback(res);
             })
-            .fail((err) => {
+            .networkFail((err) => {
                 console.error('获取模板失败:', err);
                 RequestService.reAjaxFun(() => {
                     this.getAgentTemplate(callback);
@@ -107,7 +107,7 @@ export default {
                 RequestService.clearRequestTime();
                 callback(res);
             })
-            .fail(() => {
+            .networkFail(() => {
                 RequestService.reAjaxFun(() => {
                     this.getAgentSessions(agentId, params, callback);
                 });
@@ -122,7 +122,7 @@ export default {
                 RequestService.clearRequestTime();
                 callback(res);
             })
-            .fail(() => {
+            .networkFail(() => {
                 RequestService.reAjaxFun(() => {
                     this.getAgentChatHistory(agentId, sessionId, callback);
                 });
@@ -137,7 +137,7 @@ export default {
                 RequestService.clearRequestTime();
                 callback(res);
             })
-            .fail(() => {
+            .networkFail(() => {
                 RequestService.reAjaxFun(() => {
                     this.getAudioId(audioId, callback);
                 });

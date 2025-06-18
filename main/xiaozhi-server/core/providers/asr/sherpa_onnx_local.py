@@ -5,8 +5,7 @@ import sys
 import io
 from config.logger import setup_logging
 from typing import Optional, Tuple, List
-import uuid
-import opuslib_next
+from core.providers.asr.dto.dto import InterfaceType
 from core.providers.asr.base import ASRProviderBase
 
 import numpy as np
@@ -37,6 +36,8 @@ class CaptureOutput:
 
 class ASRProvider(ASRProviderBase):
     def __init__(self, config: dict, delete_audio_file: bool):
+        super().__init__()
+        self.interface_type = InterfaceType.LOCAL
         self.model_dir = config.get("model_dir")
         self.output_dir = config.get("output_dir")
         self.delete_audio_file = delete_audio_file
@@ -83,35 +84,6 @@ class ASRProvider(ASRProviderBase):
                 use_itn=True,
             )
 
-    def save_audio_to_file(self, pcm_data: List[bytes], session_id: str) -> str:
-        """PCM数据保存为WAV文件"""
-        module_name = __name__.split(".")[-1]
-        file_name = f"asr_{module_name}_{session_id}_{uuid.uuid4()}.wav"
-        file_path = os.path.join(self.output_dir, file_name)
-
-        with wave.open(file_path, "wb") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)  # 2 bytes = 16-bit
-            wf.setframerate(16000)
-            wf.writeframes(b"".join(pcm_data))
-
-        return file_path
-
-    @staticmethod
-    def decode_opus(opus_data: List[bytes], session_id: str) -> List[bytes]:
-
-        decoder = opuslib_next.Decoder(16000, 1)  # 16kHz, 单声道
-        pcm_data = []
-
-        for opus_packet in opus_data:
-            try:
-                pcm_frame = decoder.decode(opus_packet, 960)  # 960 samples = 60ms
-                pcm_data.append(pcm_frame)
-            except opuslib_next.OpusError as e:
-                logger.bind(tag=TAG).error(f"Opus解码错误: {e}", exc_info=True)
-
-        return pcm_data
-
     def read_wave(self, wave_filename: str) -> Tuple[np.ndarray, int]:
         """
         Args:
@@ -137,14 +109,17 @@ class ASRProvider(ASRProviderBase):
             return samples_float32, f.getframerate()
 
     async def speech_to_text(
-        self, opus_data: List[bytes], session_id: str
+        self, opus_data: List[bytes], session_id: str, audio_format="opus"
     ) -> Tuple[Optional[str], Optional[str]]:
         """语音转文本主处理逻辑"""
         file_path = None
         try:
             # 保存音频文件
             start_time = time.time()
-            pcm_data = self.decode_opus(opus_data, session_id)
+            if audio_format == "pcm":
+                pcm_data = opus_data
+            else:
+                pcm_data = self.decode_opus(opus_data)
             file_path = self.save_audio_to_file(pcm_data, session_id)
             logger.bind(tag=TAG).debug(
                 f"音频文件保存耗时: {time.time() - start_time:.3f}s | 路径: {file_path}"

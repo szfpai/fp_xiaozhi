@@ -14,9 +14,11 @@ class LLMProvider(LLMProviderBase):
         self.base_url = config.get("base_url")
         self.detail = config.get("detail", False)
         self.variables = config.get("variables", {})
-        check_model_key("FastGPTLLM", self.api_key)
+        model_key_msg = check_model_key("FastGPTLLM", self.api_key)
+        if model_key_msg:
+            logger.bind(tag=TAG).error(model_key_msg)
 
-    def response(self, session_id, dialogue):
+    def response(self, session_id, dialogue, **kwargs):
         try:
             # 取最后一条用户消息
             last_msg = next(m for m in reversed(dialogue) if m["role"] == "user")
@@ -66,5 +68,6 @@ class LLMProvider(LLMProviderBase):
             yield "【服务响应异常】"
 
     def response_with_functions(self, session_id, dialogue, functions=None):
-        logger.bind(tag=TAG).info(f"fastgpt暂未实现完整的工具调用（function call）")
-        return self.response(session_id, dialogue)
+        logger.bind(tag=TAG).error(
+            f"fastgpt暂未实现完整的工具调用（function call），建议使用其他意图识别"
+        )

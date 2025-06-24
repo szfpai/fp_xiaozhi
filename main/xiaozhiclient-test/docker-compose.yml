@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  xiaozhiclient-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xiaozhiclient-test
+    ports:
+      - "8090:8090"
+    restart: unless-stopped
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=8090
+    volumes:
+      # 可选：挂载日志目录
+      - ./logs:/var/log/nginx
+    networks:
+      - xiaozhi-network
+
+networks:
+  xiaozhi-network:
+    driver: bridge 

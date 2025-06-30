@@ -8,7 +8,7 @@
         <div class="add-device">
           <div class="add-device-bg">
             <div class="hellow-text" style="margin-top: 30px;">
-              你好，小智
+              你好，浮点科技
             </div>
             <div class="hellow-text">
               让我们度过

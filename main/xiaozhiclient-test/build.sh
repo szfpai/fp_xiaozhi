@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 小智客户端测试项目构建脚本
+# 浮点客户端测试项目构建脚本
 
 echo "🐳 开始构建 xiaozhiclient-test Docker 镜像..."
 

@@ -3,17 +3,17 @@
 version: '3'
 services:
   # Server模块
-  xiaozhi-esp32-server:
+  fudian-ai-server:
     platform: linux/amd64
     build:
       context: ../../  # 构建上下文路径
       dockerfile: Dockerfile-server
     pull_policy: never
-    image: xiaozhi-esp32-server:0.1
-    container_name: xiaozhi-esp32-server
+    image: fudian-ai-server:0.2
+    container_name: fudian-ai-server
     depends_on:
-      - xiaozhi-esp32-server-db
-      - xiaozhi-esp32-server-redis
+      - fudian-ai-server-db
+      - fudian-ai-server-redis
     restart: always
     networks:
       - default
@@ -28,44 +28,44 @@ services:
       - TZ=Asia/Shanghai
     volumes:
       # 配置文件目录
-      - ./data:/opt/xiaozhi-esp32-server/data
+      - ./data:/opt/fudian-ai-server/data
       # 模型文件挂接，很重要
-      - ./models/SenseVoiceSmall/model.pt:/opt/xiaozhi-esp32-server/models/SenseVoiceSmall/model.pt
+      - ./models/SenseVoiceSmall/model.pt:/opt/fudian-ai-server/models/SenseVoiceSmall/model.pt
 
   # manager-api和manager-web模块
-  xiaozhi-esp32-server-web:
+  fudian-ai-server-web:
     platform: linux/amd64
     build:
       context: ../../  # 修改构建上下文路径为项目根目录
       dockerfile: Dockerfile-web
-    # image: ghcr.nju.edu.cn/xinnan-tech/xiaozhi-esp32-server:web_latest
-    image: xiaozhi-esp32-server-web:0.1
-    container_name: xiaozhi-esp32-server-web
+    # image: ghcr.nju.edu.cn/xinnan-tech/fudian-ai-server:web_latest
+    image: fudian-ai-server-web:0.1
+    container_name: fudian-ai-server-web
     restart: always
     networks:
       - default
     depends_on:
-      xiaozhi-esp32-server-db:
+      fudian-ai-server-db:
         condition: service_healthy
-      xiaozhi-esp32-server-redis:
+      fudian-ai-server-redis:
         condition: service_healthy
     ports:
       # 智控台
       - "8002:8002"
     environment:
       - TZ=Asia/Shanghai
-      - SPRING_DATASOURCE_DRUID_URL=jdbc:mysql://xiaozhi-esp32-server-db:3306/xiaozhi_esp32_server?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true&connectTimeout=30000&socketTimeout=30000&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
+      - SPRING_DATASOURCE_DRUID_URL=jdbc:mysql://fudian-ai-server-db:3306/fudian_ai_server?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true&connectTimeout=30000&socketTimeout=30000&autoReconnect=true&failOverReadOnly=false&maxReconnects=10
       - SPRING_DATASOURCE_DRUID_USERNAME=root
       - SPRING_DATASOURCE_DRUID_PASSWORD=123456
-      - SPRING_DATA_REDIS_HOST=xiaozhi-esp32-server-redis
+      - SPRING_DATA_REDIS_HOST=fudian-ai-server-redis
       - SPRING_DATA_REDIS_PORT=6379
     volumes:
       # 配置文件目录
       - ./uploadfile:/uploadfile
 
-  xiaozhi-esp32-server-db:
+  fudian-ai-server-db:
     image: mysql:latest
-    container_name: xiaozhi-esp32-server-db
+    container_name: fudian-ai-server-db
     healthcheck:
       test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
       timeout: 45s
@@ -81,13 +81,13 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - MYSQL_ROOT_PASSWORD=123456
-      - MYSQL_DATABASE=xiaozhi_esp32_server
+      - MYSQL_DATABASE=fudian_ai_server
       - MYSQL_INITDB_ARGS="--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci"
-  xiaozhi-esp32-server-redis:
+  fudian-ai-server-redis:
     image: redis
     expose:
       - 6379
-    container_name: xiaozhi-esp32-server-redis
+    container_name: fudian-ai-server-redis
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -98,3 +98,5 @@ services:
       - default
 networks:
   default:
+
+ 

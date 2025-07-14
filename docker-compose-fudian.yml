@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  fudian-ai-server:
+    image: fudian-ai-server:0.1
+    container_name: fudian-ai-server
+    restart: always
+    depends_on:
+      - fudian-ai-server-db
+      - fudian-ai-server-redis
+    networks:
+      - default
+    ports:
+      # ws服务端
+      - "8000:8000"
+      # http服务的端口，用于视觉分析接口
+      - "8003:8003"
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      # 配置文件目录 - 映射到项目根目录的data目录
+      - ./main/xiaozhi-server/data:/opt/fudian-ai-server/data
+      # 模型文件挂接，很重要 - 映射到main/xiaozhi-server/models目录
+      - ./main/xiaozhi-server/models:/opt/fudian-ai-server/models
+      # 配置文件映射
+      - ./main/xiaozhi-server/config.yaml:/opt/fudian-ai-server/config.yaml
+      # 临时文件目录
+      - ./tmp:/opt/fudian-ai-server/tmp
+      # 输出文件目录
+      - ./main/xiaozhi-server/output:/opt/fudian-ai-server/output
+
+
+networks:
+  xiaozhi-network:
+    driver: bridge
+    name: xiaozhi-network 

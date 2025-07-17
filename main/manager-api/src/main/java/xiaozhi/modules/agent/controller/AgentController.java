@@ -1,5 +1,6 @@
 package xiaozhi.modules.agent.controller;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -146,6 +147,153 @@ public class AgentController {
         List<AgentTemplateEntity> list = agentTemplateService
                 .list(new QueryWrapper<AgentTemplateEntity>().orderByAsc("sort"));
         return new Result<List<AgentTemplateEntity>>().ok(list);
+    }
+    @GetMapping("/template/{id}")
+    @Operation(summary = "提示词模板详情")
+    @RequiresPermissions("sys:role:normal")
+    public Result<AgentTemplateEntity> getTemplateById(@PathVariable("id") String id) {
+        AgentTemplateEntity agentTemplate = agentTemplateService.getTemplateById(id);
+        if(agentTemplate == null){
+            return new Result<AgentTemplateEntity>().error("模板不存在");
+        }
+        return new Result<AgentTemplateEntity>().ok(agentTemplate);
+    }
+
+    @PutMapping("/updatetemplate")
+    @Operation(summary = "更新提示词模板")
+    @RequiresPermissions("sys:role:normal")
+    public Result<Void> updateTemplateByDto(@RequestBody @Valid AgentTemplateEntity dto) {
+        if(dto == null){
+            return new Result<Void>().error("参数错误");
+        }
+        if(StringUtils.isBlank(dto.getId())){
+            return new Result<Void>().error("参数错误");
+        }
+        String id = dto.getId();
+        AgentTemplateEntity rawAgentTemplateEntity = agentTemplateService.getTemplateById(id);
+        if(rawAgentTemplateEntity == null){
+            return new Result<Void>().error("原始模板不存在");
+        }
+        
+        // 逐项对比并赋值
+        if(StringUtils.isNotBlank(dto.getAgentCode()) && !dto.getAgentCode().equals(rawAgentTemplateEntity.getAgentCode())){
+            rawAgentTemplateEntity.setAgentCode(dto.getAgentCode());
+        }
+        if(StringUtils.isNotBlank(dto.getAgentName()) && !dto.getAgentName().equals(rawAgentTemplateEntity.getAgentName())){
+            rawAgentTemplateEntity.setAgentName(dto.getAgentName());
+        }
+        if(StringUtils.isNotBlank(dto.getAsrModelId()) && !dto.getAsrModelId().equals(rawAgentTemplateEntity.getAsrModelId())){
+            rawAgentTemplateEntity.setAsrModelId(dto.getAsrModelId());
+        }
+        if(StringUtils.isNotBlank(dto.getVadModelId()) && !dto.getVadModelId().equals(rawAgentTemplateEntity.getVadModelId())){
+            rawAgentTemplateEntity.setVadModelId(dto.getVadModelId());
+        }
+        if(StringUtils.isNotBlank(dto.getLlmModelId()) && !dto.getLlmModelId().equals(rawAgentTemplateEntity.getLlmModelId())){
+            rawAgentTemplateEntity.setLlmModelId(dto.getLlmModelId());
+        }
+        if(StringUtils.isNotBlank(dto.getVllmModelId()) && !dto.getVllmModelId().equals(rawAgentTemplateEntity.getVllmModelId())){
+            rawAgentTemplateEntity.setVllmModelId(dto.getVllmModelId());
+        }
+        if(StringUtils.isNotBlank(dto.getTtsModelId()) && !dto.getTtsModelId().equals(rawAgentTemplateEntity.getTtsModelId())){
+            rawAgentTemplateEntity.setTtsModelId(dto.getTtsModelId());
+        }
+        if(StringUtils.isNotBlank(dto.getTtsVoiceId()) && !dto.getTtsVoiceId().equals(rawAgentTemplateEntity.getTtsVoiceId())){
+            rawAgentTemplateEntity.setTtsVoiceId(dto.getTtsVoiceId());
+        }
+        if(StringUtils.isNotBlank(dto.getMemModelId()) && !dto.getMemModelId().equals(rawAgentTemplateEntity.getMemModelId())){
+            rawAgentTemplateEntity.setMemModelId(dto.getMemModelId());
+        }
+        if(StringUtils.isNotBlank(dto.getIntentModelId()) && !dto.getIntentModelId().equals(rawAgentTemplateEntity.getIntentModelId())){
+            rawAgentTemplateEntity.setIntentModelId(dto.getIntentModelId());
+        }
+        if(dto.getChatHistoryConf() != null && !dto.getChatHistoryConf().equals(rawAgentTemplateEntity.getChatHistoryConf())){
+            rawAgentTemplateEntity.setChatHistoryConf(dto.getChatHistoryConf());
+        }
+        if(StringUtils.isNotBlank(dto.getSystemPrompt()) && !dto.getSystemPrompt().equals(rawAgentTemplateEntity.getSystemPrompt())){
+            rawAgentTemplateEntity.setSystemPrompt(dto.getSystemPrompt());
+        }
+        if(StringUtils.isNotBlank(dto.getSummaryMemory()) && !dto.getSummaryMemory().equals(rawAgentTemplateEntity.getSummaryMemory())){
+            rawAgentTemplateEntity.setSummaryMemory(dto.getSummaryMemory());
+        }
+        if(StringUtils.isNotBlank(dto.getLangCode()) && !dto.getLangCode().equals(rawAgentTemplateEntity.getLangCode())){
+            rawAgentTemplateEntity.setLangCode(dto.getLangCode());
+        }
+        if(StringUtils.isNotBlank(dto.getLanguage()) && !dto.getLanguage().equals(rawAgentTemplateEntity.getLanguage())){
+            rawAgentTemplateEntity.setLanguage(dto.getLanguage());
+        }
+        if(dto.getSort() != null && !dto.getSort().equals(rawAgentTemplateEntity.getSort())){
+            rawAgentTemplateEntity.setSort(dto.getSort());
+        }
+        rawAgentTemplateEntity.setUpdatedAt(new Date());
+        agentTemplateService.updateTemplateById(rawAgentTemplateEntity.getId(), rawAgentTemplateEntity);
+        return new Result<Void>().ok(null);
+    }
+
+    @DeleteMapping("/deletetemplate/{id}")
+    @Operation(summary = "删除提示词模板")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<Void> deleteTemplateById(@PathVariable("id") String id) {
+        if(StringUtils.isNotBlank(id) && agentTemplateService.getTemplateById(id) != null){
+            agentTemplateService.deleteTemplateById(id);
+            return new Result<Void>().ok(null);
+        }
+        return new Result<Void>().error("删除失败，模板不存在");
+    }
+
+    @PutMapping("/addtemplate")
+    @Operation(summary = "创建提示词模板")
+    @RequiresPermissions("sys:role:normal")
+    public Result<Void> creatTemplate(@RequestBody @Valid AgentTemplateEntity dto) {
+        if (dto != null) {
+            AgentTemplateEntity defaultTemplate = agentTemplateService.getDefaultTemplate();
+            
+            if (StringUtils.isBlank(dto.getId())) {
+                dto.setId(UUID.randomUUID().
+                toString().
+                replace("-", ""));
+            }
+            if (StringUtils.isBlank(dto.getAgentCode())) {
+                dto.setAgentCode(defaultTemplate.getAgentCode());
+            }
+            if (StringUtils.isBlank(dto.getSystemPrompt())) {
+                return new Result<Void>().error("提示词模板内容不能为空");
+            }
+            if (dto.getSort() == null) {
+                dto.setSort(agentTemplateService.getLastSort() + 1);
+            }
+            if (StringUtils.isBlank(dto.getAgentName())) {
+                dto.setAgentName(defaultTemplate.getAgentName());
+            }
+            if(StringUtils.isBlank(dto.getAsrModelId())){
+                dto.setAsrModelId(defaultTemplate.getAsrModelId());
+            }
+            if(StringUtils.isBlank(dto.getTtsModelId())){
+                dto.setTtsModelId(defaultTemplate.getTtsModelId());
+            }
+            if(StringUtils.isBlank(dto.getVadModelId())){
+                dto.setVadModelId(defaultTemplate.getVadModelId());
+            }
+            if(StringUtils.isBlank(dto.getLlmModelId())){
+                dto.setLlmModelId(defaultTemplate.getLlmModelId());
+            }
+            if(StringUtils.isBlank(dto.getVllmModelId())){
+                dto.setVllmModelId(defaultTemplate.getVllmModelId());
+            }
+            if(StringUtils.isBlank(dto.getTtsVoiceId())){
+                dto.setTtsVoiceId(defaultTemplate.getTtsVoiceId());
+            }
+            if(StringUtils.isBlank(dto.getMemModelId())){
+                dto.setMemModelId(defaultTemplate.getMemModelId());
+            }
+            if(StringUtils.isBlank(dto.getIntentModelId())){
+                dto.setIntentModelId(defaultTemplate.getIntentModelId());
+            }
+            dto.setCreatedAt(new Date());
+            dto.setUpdatedAt(new Date());
+            agentTemplateService.createTemplate(dto);
+            return new Result<Void>().ok(null);
+        }
+        return new Result<Void>().error("创建失败，请检查模板内容");
     }
 
     @GetMapping("/{id}/sessions")

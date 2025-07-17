@@ -104,6 +104,17 @@ const routes = [
     }
   },
   {
+    path: '/template-manage',
+    name: 'TemplateManage',
+    component: function () {
+      return import('../views/TemplateManage.vue')
+    },
+    meta: {
+      requiresAuth: true,
+      title: '角色模版管理'
+    }
+  },
+  {
     path: '/dict-management',
     name: 'DictManagement',
     component: function () {
@@ -138,7 +149,7 @@ VueRouter.prototype.push = function push(location) {
 }
 
 // 需要登录才能访问的路由
-const protectedRoutes = ['home', 'RoleConfig', 'DeviceManagement', 'UserManagement', 'ModelConfig']
+const protectedRoutes = ['home', 'RoleConfig', 'DeviceManagement', 'UserManagement', 'ModelConfig', 'TemplateManage']
 
 // 路由守卫
 router.beforeEach((to, from, next) => {

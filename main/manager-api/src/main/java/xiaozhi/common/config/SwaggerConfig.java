@@ -82,8 +82,8 @@ public class SwaggerConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI().info(new Info()
-                .title("xiaozhi-esp32-manager-api")
-                .description("xiaozhi-esp32-manager-api文档")
+                .title("fudian-manager-api")
+                .description("fudian-manager-api文档")
                 .version("3.0")
                 .termsOfService("https://127.0.0.1"));
     }

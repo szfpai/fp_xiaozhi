@@ -1,6 +1,7 @@
 package xiaozhi.modules.agent.service.impl;
 
 import org.springframework.stereotype.Service;
+import java.util.List;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -29,6 +30,14 @@ public class AgentTemplateServiceImpl extends ServiceImpl<AgentTemplateDao, Agen
         wrapper.orderByAsc(AgentTemplateEntity::getSort)
                 .last("LIMIT 1");
         return this.getOne(wrapper);
+    }
+
+    @Override
+    public int getLastSort() {
+        LambdaQueryWrapper<AgentTemplateEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(AgentTemplateEntity::getSort)
+                .last("LIMIT 1");
+        return this.getOne(wrapper).getSort();
     }
 
     /**
@@ -69,4 +78,35 @@ public class AgentTemplateServiceImpl extends ServiceImpl<AgentTemplateDao, Agen
         wrapper.ge("sort", 0);
         update(wrapper);
     }
+
+    @Override
+    public List<AgentTemplateEntity> getAllTemplates() {
+        return this.list();
+    }
+
+    @Override
+    public AgentTemplateEntity getTemplateById(String id) {
+        return this.getById(id);
+    }
+
+    @Override
+    public void deleteTemplateById(String id) {     
+        this.removeById(id);
+    }
+
+    @Override
+    public void updateTemplateById(String id, AgentTemplateEntity template) {
+        this.updateById(template);
+    }
+
+    @Override
+    public void createTemplate(AgentTemplateEntity template) {
+        this.save(template);
+    }
+    
+    @Override
+    public void updateTemplate(AgentTemplateEntity template) {
+        this.updateById(template);
+    }
+    
 }

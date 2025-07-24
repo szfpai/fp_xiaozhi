@@ -69,6 +69,9 @@ public class AgentUpdateDTO implements Serializable {
     @Schema(description = "排序", example = "1", nullable = true)
     private Integer sort;
 
+    @Schema(description = "智能体特殊配置", example = "{\"agentAge\":\"8\",\"agentCharactor\":\"活波开朗\"}", nullable = true)
+    private String agentSpecialConfig;
+
     @Data
     @Schema(description = "插件函数信息")
     public static class FunctionInfo implements Serializable {

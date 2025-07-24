@@ -497,8 +497,8 @@ export default {
       modelApi.getModelVoices(modelId, '', (res) => {
         if (res.data.code === 0) {
           this.voiceList = res.data.data.map(item => ({
-            label: item.voiceName,
-            value: item.voiceId
+            label: item.name,
+            value: item.id
           }));
         } else {
           this.voiceList = [];

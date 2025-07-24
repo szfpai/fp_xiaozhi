@@ -255,6 +255,9 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         if (dto.getSort() != null) {
             existingEntity.setSort(dto.getSort());
         }
+        if (dto.getAgentSpecialConfig() != null) {
+            existingEntity.setAgentSpecialConfig(dto.getAgentSpecialConfig());
+        }
 
         // 更新函数插件信息
         List<AgentUpdateDTO.FunctionInfo> functions = dto.getFunctions();

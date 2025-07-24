@@ -81,4 +81,7 @@ public class AgentEntity {
 
     @Schema(description = "更新时间")
     private Date updatedAt;
+
+    @Schema(description = "智能体特殊配置")
+    private String agentSpecialConfig;
 }

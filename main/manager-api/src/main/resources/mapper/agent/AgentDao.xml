@@ -32,6 +32,7 @@
         <result column="createdAt" property="createdAt"/>
         <result column="updater" property="updater"/>
         <result column="updatedAt" property="updatedAt"/>
+        <result column="agentSpecialConfig" property="agentSpecialConfig"/>
     </resultMap>
 
     <select id="selectAgentInfoById" resultMap="AgentInfoMap">

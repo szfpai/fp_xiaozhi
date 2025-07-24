@@ -27,6 +27,7 @@ import xiaozhi.modules.sys.dto.SysParamsDTO;
 import xiaozhi.modules.sys.service.SysParamsService;
 import xiaozhi.modules.timbre.service.TimbreService;
 import xiaozhi.modules.timbre.vo.TimbreDetailsVO;
+import com.alibaba.fastjson.JSONObject;
 
 @Service
 @AllArgsConstructor
@@ -68,6 +69,8 @@ public class ConfigServiceImpl implements ConfigService {
                 null,
                 agent.getVadModelId(),
                 agent.getAsrModelId(),
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -158,6 +161,8 @@ public class ConfigServiceImpl implements ConfigService {
                 agent.getTtsModelId(),
                 agent.getMemModelId(),
                 agent.getIntentModelId(),
+                agent.getAgentSpecialConfig(),
+                agent.getLanguage(),
                 result,
                 true);
 
@@ -260,6 +265,8 @@ public class ConfigServiceImpl implements ConfigService {
             String ttsModelId,
             String memModelId,
             String intentModelId,
+            String agentSpecialConfig,
+            String language,
             Map<String, Object> result,
             boolean isCache) {
         Map<String, String> selectedModule = new HashMap<>();
@@ -334,6 +341,14 @@ public class ConfigServiceImpl implements ConfigService {
         result.put("selected_module", selectedModule);
         if (StringUtils.isNotBlank(prompt)) {
             prompt = prompt.replace("{{assistant_name}}", StringUtils.isBlank(assistantName) ? "小智" : assistantName);
+            prompt = prompt.replace("{{language}}", StringUtils.isBlank(language) ? "中文" : language);
+            if (StringUtils.isNotBlank(agentSpecialConfig)) {
+                JSONObject jsonObject = JSONObject.parseObject(agentSpecialConfig);
+                prompt = prompt.replace("{{assistant_age}}", StringUtils.isBlank(jsonObject.getString("agentAge")) 
+                ? "8":jsonObject.getString("agentAge"));
+                prompt = prompt.replace("{{assistant_character}}", StringUtils.isBlank(jsonObject.getString("agentCharactor")) 
+                ? "活波开朗":jsonObject.getString("agentCharactor"));
+            }
         }
         result.put("prompt", prompt);
         result.put("summaryMemory", summaryMemory);

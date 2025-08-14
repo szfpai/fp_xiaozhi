@@ -40,6 +40,12 @@
             :style="{ filter: $route.path === '/template-manage' ? 'brightness(0) invert(1)' : 'None' }" />
           角色模版管理
         </div>
+        <div v-if="isSuperAdmin" class="equipment-management"
+          :class="{ 'active-tab': $route.path === '/app-management' }" @click="goAppManagement">
+          <img loading="lazy" alt="" src="@/assets/header/firmware_update.png"
+            :style="{ filter: $route.path === '/app-management' ? 'brightness(0) invert(1)' : 'None' }" />
+          应用管理
+        </div>
         <el-dropdown v-if="isSuperAdmin" trigger="click" class="equipment-management more-dropdown"
           :class="{ 'active-tab': $route.path === '/dict-management' || $route.path === '/params-management' || $route.path === '/provider-management' || $route.path === '/server-side-management' }"
           @visible-change="handleParamDropdownVisibleChange">
@@ -160,6 +166,9 @@ export default {
     },
     goTemplateManage() {
       this.$router.push('/template-manage')
+    },
+    goAppManagement() {
+      this.$router.push('/app-management')
     },
     // 获取用户信息
     fetchUserInfo() {

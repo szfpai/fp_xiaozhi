@@ -5,12 +5,16 @@ server:
     threads:
       max: 1000
       min-spare: 30
+    connection-timeout: 600000  # 连接超时10分钟（600秒）
+    max-connections: 8192       # 最大连接数
+    accept-count: 100           # 等待队列大小
   port: 8002
   servlet:
     context-path: /fpsphere
     session:
       cookie:
         http-only: true
+      timeout: 10m              # 会话超时10分钟
 
 spring:
   # 环境 dev|test|prod
@@ -21,8 +25,8 @@ spring:
     basename: i18n/messages
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: 200MB
+      max-request-size: 200MB
       enabled: true
   main:
     allow-bean-definition-overriding: true
@@ -42,6 +46,12 @@ renren:
   xss:
     enabled: true
     exclude-urls:
+
+# Liquibase配置
+liquibase:
+  enabled: true
+  change-log: classpath:db/changelog/db.changelog-master.yaml
+  contexts: ${spring.profiles.active}
 
 #mybatis
 mybatis-plus:

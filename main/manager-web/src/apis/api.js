@@ -19,6 +19,10 @@ const DEV_API_SERVICE = process.env.VUE_APP_API_BASE_URL
  * @returns {string}
  */
 export function getServiceUrl() {
+    // 如果没有设置环境变量，使用默认值
+    if (!DEV_API_SERVICE) {
+        return '/fpsphere'
+    }
     return DEV_API_SERVICE
 }
 

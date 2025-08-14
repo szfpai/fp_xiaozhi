@@ -128,6 +128,18 @@ const routes = [
       return import('../views/ProviderManagement.vue')
     }
   },
+  // 应用管理页面路由
+  {
+    path: '/app-management',
+    name: 'AppManagement',
+    component: function () {
+      return import('../views/AppManagement.vue')
+    },
+    meta: {
+      requiresAuth: true,
+      title: '应用管理'
+    }
+  },
 ]
 const router = new VueRouter({
   base: process.env.VUE_APP_PUBLIC_PATH || '/',

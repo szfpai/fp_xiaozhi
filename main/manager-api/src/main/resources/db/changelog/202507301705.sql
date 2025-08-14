@@ -1,0 +1,2 @@
+INSERT INTO `sys_dict_data` (`id`, `dict_type_id`, `dict_label`, `dict_value`, `remark`, `sort`, `creator`, `create_date`, `updater`, `update_date`) VALUES 
+(101056, 101, '喵伴开发板', 'EchoEar', '豹拓科技', 56, 1, NOW(), 1, NOW());

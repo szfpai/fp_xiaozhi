@@ -4,8 +4,8 @@ import Constant from '../utils/constant';
 import { goToPage, isNotNull, showDanger, showWarning } from '../utils/index';
 
 const fly = new Fly()
-// 设置超时
-fly.config.timeout = 30000
+// 设置超时 - 增加到10分钟（600秒），适合大文件上传
+fly.config.timeout = 600000
 
 /**
  * Request服务封装

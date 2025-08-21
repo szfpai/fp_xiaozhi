@@ -114,7 +114,7 @@ export default {
   deleteBatchApp(ids, callback, failCallback) {
     RequestService.sendRequest()
       .url(`${getServiceUrl()}/app/batch`)
-      .method('DELETE')
+      .method('POST')
       .data(ids)
       .success((res) => {
         RequestService.clearRequestTime()

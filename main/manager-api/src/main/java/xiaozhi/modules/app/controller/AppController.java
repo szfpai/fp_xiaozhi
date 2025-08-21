@@ -76,7 +76,7 @@ public class AppController {
         return new Result<Void>();
     }
 
-    @DeleteMapping("/batch")
+    @PostMapping("/batch")
     @Operation(summary = "批量删除应用")
     public Result<Void> deleteBatch(@RequestBody String[] ids) {
         appService.delete(ids);
